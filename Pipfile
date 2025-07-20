@@ -4,9 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fastapi = "==0.78.0"
-pydantic = "==1.9.1"
-uvicorn = "==0.17.6"
+fastapi = "*"
+uvicorn = "*"
 
 [dev-packages]
 
