@@ -59,11 +59,12 @@ def track(track_id: int, response: Response, session: Session = Depends(get_sess
   return track
 
 @app.post('/tracks/', response_model=Track, status_code=201)
-def create_track(track: Track):
-  track_dict = track.model_dump()
-  track_dict['id'] = max(data, key=lambda x: x['id']).get('id') + 1
-  data.append(track_dict)
-  return track_dict
+def create_track(track: TrackModel, session: Session = Depends(get_session)):
+  # change track from pydantic to sql model, 
+  session.add(track) # type hints as a sql model, no longer need validation in database with validate_assignment
+  session.commit()
+  session.refresh(track)
+  return track
 
 @app.put('/tracks/{track_id}', response_model=Union[Track, str])
 def update_track(track_id: int, updated_track: Track, response: Response):
