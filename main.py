@@ -39,21 +39,21 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get('/tracks/', response_model=List[Track])
 def tracks():
-  return data
+  # select * from table
+  with Session(engine) as session:
+    stmt = select(TrackModel)
+    result = session.exec(stmt).all()
+  return result
 
 @app.get('/tracks/{track_id}', response_model=Union[Track, str])
 def track(track_id: int, response: Response):
   #Find the track with the given ID, or None if it does not exist
-  track = None
-  for t in data:
-    if t['id'] == track_id:
-      track = t
-      break
-
-  if track is None:
-    response.status_code = 404
-    return "Track not found"
-  return track
+  with Session(engine) as session:
+    track = session.get(TrackModel, track_id)
+    if track is None:
+      response.status_code = 404
+      return "Track not found"
+    return track
 
 @app.post('/tracks/', response_model=Track, status_code=201)
 def create_track(track: Track):
