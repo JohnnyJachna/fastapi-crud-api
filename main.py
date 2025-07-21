@@ -6,7 +6,7 @@ from typing import List, Union
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Depends
 from sqlmodel import Session, select
 
 from models import Track
@@ -37,23 +37,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-@app.get('/tracks/', response_model=List[Track])
-def tracks():
-  # select * from table
+# FastAPI dependency function
+def get_session():
   with Session(engine) as session:
-    stmt = select(TrackModel)
-    result = session.exec(stmt).all()
+    yield session
+
+@app.get('/tracks/', response_model=List[Track])
+def tracks(session: Session = Depends(get_session)):
+  # select * from table
+  stmt = select(TrackModel)
+  result = session.exec(stmt).all()
   return result
 
 @app.get('/tracks/{track_id}', response_model=Union[Track, str])
-def track(track_id: int, response: Response):
+def track(track_id: int, response: Response, session: Session = Depends(get_session)):
   #Find the track with the given ID, or None if it does not exist
-  with Session(engine) as session:
-    track = session.get(TrackModel, track_id)
-    if track is None:
-      response.status_code = 404
-      return "Track not found"
-    return track
+  track = session.get(TrackModel, track_id)
+  if track is None:
+    response.status_code = 404
+    return "Track not found"
+  return track
 
 @app.post('/tracks/', response_model=Track, status_code=201)
 def create_track(track: Track):
