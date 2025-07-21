@@ -67,38 +67,36 @@ def create_track(track: TrackModel, session: Session = Depends(get_session)):
   return track
 
 @app.put('/tracks/{track_id}', response_model=Union[Track, str])
-def update_track(track_id: int, updated_track: Track, response: Response):
-  #Find the track with the given ID, or None if it does not exist
-  track = None
-  for t in data:
-    if t['id'] == track_id:
-      track = t
-      break
+def update_track(track_id: int, updated_track: Track, response: Response, session: Session = Depends(get_session)):
+  
+  track = session.get(TrackModel, track_id)
 
   if track is None:
     response.status_code = 404
     return "Track not found"
   
-  for key, val in updated_track.model_dump().items():
-    if key != 'id':
-      track[key] = val
+  # update the track data
+  track_dict = updated_track.model_dump(exclude_unset=True) 
+  # exclude_unset: any values not set in the pydantic model will not be converted into the dictionary
+  for key, val in track_dict.items():
+    setattr(track, key, val)
+
+  session.add(track)
+  session.commit()
+  session.refresh(track)
   return track
 
 @app.delete('/tracks/{track_id}')
-def delete_track(track_id: int, response: Response):
-  #Find the track with the given ID, or None if it does not exist
-  track_index = None
-  for idx, t in enumerate(data):
-    if t['id'] == track_id:
-      track_index = idx
-      break
+def delete_track(track_id: int, response: Response, session: Session = Depends(get_session)):
+  
+  track = session.get(TrackModel, track_id)
 
-  if track_index is None:
+  if track is None:
     response.status_code = 404
     return "Track not found"
   
-  del data[track_index]
-  return Response(status_code=200)
+  session.delete(track)
+  session.commit()
 
 if __name__ == '__main__':
   uvicorn.run('main:app', host='localhost', port=8000, reload=True)
