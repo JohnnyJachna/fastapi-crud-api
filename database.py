@@ -6,8 +6,12 @@ DB_FILE = 'db.sqlite3'
 engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
 
 class TrackModel(SQLModel, table=True):
-  class Config: # Without this, I got a long list of typecheck errors
+  # Without this, I got a long list of typecheck errors 
+  # Revalidates the types of the model when the data is changed
+  # https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.validate_assignment
+  class Config:
     validate_assignment = True 
+  
   id: Optional[int] = Field(default=None, primary_key=True)
   title: str
   artist: str
