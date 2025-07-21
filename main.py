@@ -1,21 +1,38 @@
 import json
 import pathlib
 import uvicorn
+
 from typing import List, Union
-from fastapi import FastAPI, Response
-from models import Track
+from datetime import datetime
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Response
+from sqlmodel import Session, select
+
+from models import Track
+from database import TrackModel, engine
 
 
 data = []
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-  datapath = pathlib.Path() / 'data' / 'tracks.json' #Set variable to path of tracks.json
-  with open(datapath, 'r') as f: #Open file at path above, read mode, reference as f
-    tracks = json.load(f) #Convert json data to python dictionaries
-    for track in tracks:
-      data.append(Track(**track).model_dump()) #Track() object from pydantic, destructure track data, and convert to dictionary
+  DATAFILE = pathlib.Path() / 'data' / 'tracks.json' #Set variable to path of tracks.json
+  
+  session = Session(engine)
+
+  # Check if the database is already populated
+  stmt = select(TrackModel)
+  result = session.exec(stmt).first()
+  
+  # Load data if there's no results
+  if result is None:
+    with open(DATAFILE, 'r') as f:
+      tracks = json.load(f)
+      for track in tracks:
+        session.add(TrackModel(**track))
+    session.commit()
+  session.close()
   yield
 
 app = FastAPI(lifespan=lifespan)
